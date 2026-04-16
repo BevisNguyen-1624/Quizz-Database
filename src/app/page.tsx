@@ -1,65 +1,190 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { format } from 'date-fns';
+import { Search, Trash2, ArrowUpDown, RefreshCw, User, Trophy, Calendar } from 'lucide-react';
+
+interface QuizResult {
+  _id: string;
+  userId: string;
+  score: number;
+  timestamp: string;
+}
 
 export default function Home() {
+  const [results, setResults] = useState<QuizResult[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('timestamp');
+  const [sortOrder, setSortOrder] = useState('desc');
+
+  const fetchResults = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/results?search=${search}&sortBy=${sortBy}&sortOrder=${sortOrder}`);
+      const data = await res.json();
+      if (data.success) {
+        setResults(data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch results', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [search, sortBy, sortOrder]);
+
+  useEffect(() => {
+    fetchResults();
+  }, [fetchResults]);
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this result?')) return;
+    
+    try {
+      const res = await fetch(`/api/results/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        fetchResults();
+      } else {
+        alert('Failed to delete');
+      }
+    } catch (error) {
+      console.error('Failed to delete', error);
+      alert('An error occurred');
+    }
+  };
+
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortOrder('desc');
+    }
+  };
+
+  // Calculate stats
+  const totalEntries = results.length;
+  const uniqueUsers = new Set(results.map(r => r.userId)).size;
+  const avgScore = totalEntries > 0 ? (results.reduce((acc, r) => acc + r.score, 0) / totalEntries).toFixed(1) : 0;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="container">
+      <div className="header">
+        <div>
+          <h1 className="title">Quiz Dashboard</h1>
+          <p className="subtitle">Database management for BinhNH Quiz application</p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+        <div className="controls">
+          <div className="search-wrapper">
+            <Search size={18} className="search-icon" />
+            <input 
+              type="text" 
+              placeholder="Search by Employee ID..." 
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="search-input"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+          </div>
+          <button 
+            className="refresh-btn" 
+            onClick={fetchResults}
+            disabled={loading}
           >
-            Documentation
-          </a>
+            <RefreshCw size={18} className={loading ? "spin" : ""} />
+            Refresh
+          </button>
         </div>
-      </main>
-    </div>
+      </div>
+
+      <div className="stat-cards">
+        <div className="stat-card">
+          <div className="stat-label">Total Submissions</div>
+          <div className="stat-value">{totalEntries}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">Unique Participants</div>
+          <div className="stat-value">{uniqueUsers}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">Average Score</div>
+          <div className="stat-value">{avgScore}</div>
+        </div>
+      </div>
+
+      <div className="glass-panel">
+        <div className="table-wrapper">
+          <table className="result-table">
+            <thead>
+              <tr>
+                <th onClick={() => handleSort('userId')}>
+                  <div className="th-content">
+                    <User size={16} /> Employee ID <ArrowUpDown size={14} />
+                  </div>
+                </th>
+                <th onClick={() => handleSort('score')}>
+                  <div className="th-content">
+                    <Trophy size={16} /> Score <ArrowUpDown size={14} />
+                  </div>
+                </th>
+                <th onClick={() => handleSort('timestamp')}>
+                  <div className="th-content">
+                    <Calendar size={16} /> Date Submitted <ArrowUpDown size={14} />
+                  </div>
+                </th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={4}>
+                    <div className="loader">
+                      <div className="spinner"></div>
+                    </div>
+                  </td>
+                </tr>
+              ) : results.length === 0 ? (
+                <tr>
+                  <td colSpan={4}>
+                    <div className="empty-state">
+                      No results found matching your criteria.
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                results.map((result) => (
+                  <tr key={result._id}>
+                    <td>
+                      <span className="employee-badge">
+                        <User size={14} />
+                        {result.userId}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`score-badge ${result.score > 8 ? 'score-high' : result.score > 5 ? 'score-med' : 'score-low'}`}>
+                        {result.score} pts
+                      </span>
+                    </td>
+                    <td>
+                      {format(new Date(result.timestamp), 'MMM dd, yyyy HH:mm')}
+                    </td>
+                    <td>
+                      <button 
+                        className="action-btn"
+                        onClick={() => handleDelete(result._id)}
+                        title="Delete record"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
   );
 }
