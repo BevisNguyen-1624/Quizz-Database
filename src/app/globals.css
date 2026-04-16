@@ -256,6 +256,31 @@ body {
   cursor: not-allowed;
 }
 
+.export-btn {
+  background: var(--success);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.export-btn:hover {
+  background: #059669; /* Slightly darker green */
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+}
+
+.export-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .stat-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
-import { Search, Trash2, ArrowUpDown, RefreshCw, User, Trophy, Calendar } from 'lucide-react';
+import { Search, Trash2, ArrowUpDown, RefreshCw, User, Trophy, Calendar, FileSpreadsheet } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 interface QuizResult {
   _id: string;
@@ -63,6 +64,28 @@ export default function Home() {
     }
   };
 
+  const handleExportExcel = () => {
+    if (results.length === 0) {
+      alert("No data to export!");
+      return;
+    }
+    
+    // Formatting data for Excel
+    const dataToExport = results.map((result) => ({
+      'Employee ID': result.userId,
+      'Score': result.score,
+      'Date Submitted': format(new Date(result.timestamp), 'yyyy-MM-dd HH:mm:ss')
+    }));
+
+    // Create a new workbook and add the worksheet
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Quiz Results');
+
+    // Generate buffer and trigger download
+    XLSX.writeFile(workbook, `Quiz_Results_${format(new Date(), 'yyyyMMdd_HHmmss')}.xlsx`);
+  };
+
   // Calculate stats
   const totalEntries = results.length;
   const uniqueUsers = new Set(results.map(r => r.userId)).size;
@@ -86,6 +109,15 @@ export default function Home() {
               className="search-input"
             />
           </div>
+          <button 
+            className="export-btn" 
+            onClick={handleExportExcel}
+            title="Export to Excel"
+            disabled={results.length === 0}
+          >
+            <FileSpreadsheet size={18} />
+            Export
+          </button>
           <button 
             className="refresh-btn" 
             onClick={fetchResults}
